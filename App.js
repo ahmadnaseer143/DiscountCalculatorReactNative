@@ -1,14 +1,46 @@
 import { StatusBar } from 'expo-status-bar';
 import React, {useState} from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Button } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Button, Touchable } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import ShowModal from "./ShowModal";
 
 const HistoryScreen = ({navigation, route})=>{
-  const {history} = route.params;
+  const {history, handleDelete} = route.params;
+  const [showModal, setShowModal] = React.useState(false);
+
+  // delete entire history
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Button
+        onPress={()=>{setShowModal(true)}}
+        title="Clear History"
+        color="black"
+      />
+      ),
+    });
+  }, [navigation, setShowModal]);
+
+  const hideModal = (msg) => {
+    setShowModal(!showModal);
+    if (msg === "ok") {
+      navigation.setParams({
+        history: [],
+      });
+    }
+  };
+
+  // handle delete button
+  React.useEffect(() => handleDelete(history));
+  const deleteItem = (id) => {
+    navigation.setParams({
+      history: history.filter((element) => element.index !== id),
+    });
+  };
   return(
     <View>
-      <View style={{flexDirection:"row", borderBottomColor: 'black',borderBottomWidth: 1,}}>
+      <View style={{flexDirection:"row", borderBottomColor: 'black',borderBottomWidth: 1,marginBottom:20}}>
         <Text style={{ fontSize: 17}}>OriginalPrice - </Text>
         <Text style={{ fontSize: 17}}>DiscountPercentage = </Text>
         <Text style={{ fontSize: 17}}>FinalPrice</Text>
@@ -21,17 +53,22 @@ const HistoryScreen = ({navigation, route})=>{
                 <Text style={{ fontSize: 15, paddingEnd:130}}>{element.originalPrice} -</Text>
                 <Text style={{ fontSize: 15, paddingEnd:100}}>{element.discountPercentage} =</Text>
                 <Text style={{ fontSize: 15}}>{element.finalPrice} </Text>
+                <TouchableOpacity onPress={()=>{deleteItem(element.index)}} style={{backgroundColor:"black", borderRadius:25, marginLeft:2}}>
+                  <Text style={{color:"white", fontSize:16}}>Delete</Text>
+                </TouchableOpacity>
               </View>
               <View
                 style={{
                   borderBottomColor: 'black',
                   borderBottomWidth: 1,
+                  marginTop:5
                 }}
               />
             </View>
           )
         })
       }
+      {showModal ? <ShowModal show={true} hideModal={hideModal} /> : null}
     </View>
   )
 }
@@ -42,6 +79,7 @@ const StartScreen = ({navigation})=>{
         onPress={() =>{
           navigation.navigate("History", {
             history:history,
+            handleDelete:handleDelete,
           })
         }}
         title="Show History"
@@ -55,6 +93,7 @@ const StartScreen = ({navigation})=>{
   const [finalPrice, setFinalPrice] = useState();
   const [history, setHistory] = useState([]);
 
+  // save an item
   const handleSave = ()=>{
     if (price > 0 && discountPercentage > 0) {
       let myObj = {
@@ -63,14 +102,16 @@ const StartScreen = ({navigation})=>{
         finalPrice: finalPrice,
         index: Math.random(),
       };
-      
-      console.log("myObj:"+myObj);
       setHistory([...history, myObj]);
-      console.log(history);
     }
     setPrice(0);
     setDiscountPercentage(0);
   }
+  // delete an item
+  const handleDelete = (newArr) => {
+    setHistory(newArr);
+  };
+
   React.useEffect(() => {
     var disc = discountPercentage / 100;
     var final_price = price - price * disc;
